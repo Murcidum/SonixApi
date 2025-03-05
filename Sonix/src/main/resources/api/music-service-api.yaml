@@ -1,0 +1,636 @@
+openapi: 3.0.3
+info:
+  title: Music Service API
+  description: API для музыкального стриминг-сервиса
+  version: 1.0.0
+servers:
+  - url: 'https://api.musicservice.com/v1'
+    description: Production server
+  - url: 'http://localhost:8080/v1'
+    description: Development server
+
+tags:
+  - name: songs
+    description: Операции с песнями
+  - name: artists
+    description: Операции с исполнителями
+  - name: albums
+    description: Операции с альбомами
+  - name: playlists
+    description: Операции с плейлистами
+  - name: users
+    description: Операции с пользователями
+
+paths:
+  /songs:
+    get:
+      tags:
+        - songs
+      summary: Получить список песен
+      operationId: getSongs
+      parameters:
+        - name: title
+          in: query
+          schema:
+            type: string
+          description: Фильтр по названию песни
+        - name: artist
+          in: query
+          schema:
+            type: string
+          description: Фильтр по исполнителю
+        - name: genre
+          in: query
+          schema:
+            type: string
+          description: Фильтр по жанру
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Номер страницы
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Размер страницы
+      responses:
+        '200':
+          description: Список песен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageSong'
+    post:
+      tags:
+        - songs
+      summary: Добавить новую песню
+      operationId: createSong
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SongRequest'
+      responses:
+        '201':
+          description: Песня создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Song'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /songs/{songId}:
+    get:
+      tags:
+        - songs
+      summary: Получить песню по ID
+      operationId: getSongById
+      parameters:
+        - name: songId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Детали песни
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Song'
+        '404':
+          description: Песня не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - songs
+      summary: Обновить песню
+      operationId: updateSong
+      parameters:
+        - name: songId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SongRequest'
+      responses:
+        '200':
+          description: Песня обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Song'
+        '404':
+          description: Песня не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - songs
+      summary: Удалить песню
+      operationId: deleteSong
+      parameters:
+        - name: songId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Песня удалена
+        '404':
+          description: Песня не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /songs/{songId}/stream:
+    get:
+      tags:
+        - songs
+      summary: Стриминг аудио песни
+      operationId: streamSong
+      parameters:
+        - name: songId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: quality
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high]
+            default: medium
+      responses:
+        '200':
+          description: Аудио поток
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Песня не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /artists:
+    get:
+      tags:
+        - artists
+      summary: Получить список исполнителей
+      operationId: getArtists
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Фильтр по имени исполнителя
+        - name: genre
+          in: query
+          schema:
+            type: string
+          description: Фильтр по жанру
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Список исполнителей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageArtist'
+  
+  /artists/{artistId}:
+    get:
+      tags:
+        - artists
+      summary: Получить исполнителя по ID
+      operationId: getArtistById
+      parameters:
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Детали исполнителя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artist'
+        '404':
+          description: Исполнитель не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /artists/{artistId}/songs:
+    get:
+      tags:
+        - artists
+        - songs
+      summary: Получить песни исполнителя
+      operationId: getArtistSongs
+      parameters:
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Список песен исполнителя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageSong'
+        '404':
+          description: Исполнитель не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
+  /playlists:
+    get:
+      tags:
+        - playlists
+      summary: Получить плейлисты пользователя
+      operationId: getUserPlaylists
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Список плейлистов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagePlaylist'
+    post:
+      tags:
+        - playlists
+      summary: Создать новый плейлист
+      operationId: createPlaylist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaylistRequest'
+      responses:
+        '201':
+          description: Плейлист создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+  
+  /playlists/{playlistId}/songs:
+    post:
+      tags:
+        - playlists
+      summary: Добавить песню в плейлист
+      operationId: addSongToPlaylist
+      parameters:
+        - name: playlistId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - songId
+              properties:
+                songId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Песня добавлена в плейлист
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '404':
+          description: Плейлист или песня не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Song:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        artist:
+          $ref: '#/components/schemas/Artist'
+        album:
+          $ref: '#/components/schemas/Album'
+        genre:
+          type: string
+        duration:
+          type: integer
+          description: Длительность в секундах
+        releaseDate:
+          type: string
+          format: date
+        url:
+          type: string
+          format: uri
+        coverArtUrl:
+          type: string
+          format: uri
+      required:
+        - id
+        - title
+        - artist
+        - duration
+    
+    SongRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        artistId:
+          type: string
+          format: uuid
+        albumId:
+          type: string
+          format: uuid
+        genre:
+          type: string
+        duration:
+          type: integer
+          minimum: 1
+        releaseDate:
+          type: string
+          format: date
+      required:
+        - title
+        - artistId
+        - duration
+    
+    Artist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        biography:
+          type: string
+        genres:
+          type: array
+          items:
+            type: string
+        imageUrl:
+          type: string
+          format: uri
+      required:
+        - id
+        - name
+    
+    Album:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        artist:
+          $ref: '#/components/schemas/Artist'
+        releaseDate:
+          type: string
+          format: date
+        coverArtUrl:
+          type: string
+          format: uri
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+      required:
+        - id
+        - title
+        - artist
+        - releaseDate
+    
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        isPublic:
+          type: boolean
+          default: false
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - userId
+        - isPublic
+    
+    PlaylistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        isPublic:
+          type: boolean
+          default: false
+        songIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - name
+    
+    PageSong:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+    
+    PageArtist:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artist'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+    
+    PagePlaylist:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Playlist'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+    
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
