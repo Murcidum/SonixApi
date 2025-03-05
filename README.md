@@ -1,2 +1,2 @@
 # MusicService
-Music service using the spring framework 
+Music service API with Swagger and OnepApi
